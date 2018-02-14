@@ -113,7 +113,7 @@ int exact(int m, string path, double timeLimit, double bound_tolerance)
     for (int j=0; j<num_obj-1; j++)
         cp_status=CPXchgcoef (env, prob, num_mathmodel_row + j, j, 1);
     
-    //cp_status = CPXwriteprob (env, prob, "myprob.lp", NULL);
+    // cp_status = CPXwriteprob (env, prob, (path+"myprob.lp").c_str(), NULL);
     
     mathmodel_sol = new double [num_obj];
     cp_status = CPXmipopt (env, prob); // solve the problem
@@ -172,9 +172,9 @@ int exact(int m, string path, double timeLimit, double bound_tolerance)
     }
     else
     {
-        cout << "Model is infeasible\n";
+        cout << "Failed to solve single objective problem.\n";
         flag = 0;
-        solver_status = "ProblemInfeasible";
+        solver_status = "FailedToSolveSingleObjProblem";
     }
     
     // check the stopping conditions
@@ -325,23 +325,30 @@ int exact(int m, string path, double timeLimit, double bound_tolerance)
     
     // display the generated points
     //cout << "Nondominated point list: \n";
+    file_ND_points << "#Solver type:" << endl << "nMOCO-S" << endl;
     file_ND_points << "#Solver status:" << endl << solver_status << endl;
-    file_ND_points << "#Number of nondominated points:" << endl << num_point << endl;
-    file_ND_points << "#Number of models solved:" << endl << num_model_solved << endl;
-    file_ND_points << "#Elapsed time (seconds):" << endl << cpu_time << endl;
-    file_ND_points << "#Incumbent ideal point:" << endl;
-    for (int j=0; j<num_obj; j++) file_ND_points << idealPoint[j] << " ";
-    file_ND_points << endl;
-    file_ND_points << "#Incumbent nadir point:" << endl;
-    for (int j=0; j<num_obj; j++) file_ND_points << nadirPoint[j] << " ";
-    file_ND_points << endl;
-    file_ND_points << "#The set of nondominated points:" << endl;
-    for (int i=0; i < gen_points.size(); i++) {
-        for (int j=0; j<num_obj; j++) {
-            file_ND_points << gen_points[i][j] << " ";
+    if (solver_status != "FailedToSolveSingleObjProblem") {
+        file_ND_points << "#Number of nondominated points:" << endl << num_point << endl;
+        file_ND_points << "#Number of models solved:" << endl << num_model_solved << endl;
+        file_ND_points << "#Elapsed time (seconds):" << endl << cpu_time << endl;
+        file_ND_points << "#Incumbent ideal point:" << endl;
+        for (int j=0; j<num_obj; j++) file_ND_points << idealPoint[j] << " ";
+        file_ND_points << endl;
+        file_ND_points << "#Incumbent nadir point:" << endl;
+        for (int j=0; j<num_obj; j++) file_ND_points << nadirPoint[j] << " ";
+        file_ND_points << endl;
+        file_ND_points << "#The set of nondominated points:" << endl;
+        for (int i=0; i < gen_points.size(); i++) {
+            for (int j=0; j<num_obj; j++) {
+                file_ND_points << gen_points[i][j] << " ";
+            }
+            file_ND_points << "\n";
         }
-        file_ND_points << "\n";
+    } else {
+        file_ND_points << "#Cplex error code:" << endl << cp_status << endl;
+        file_ND_points << "#Cplex optimization status:" << endl << cp_opt << endl;
     }
+    
     file_ND_points.close();
     CPXfreeprob(env, &prob);
     return 1;
