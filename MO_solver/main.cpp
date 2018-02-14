@@ -19,7 +19,6 @@ int main(int argc, const char * argv[]) {
     
     // read the program settings
     string path = argv[1];
-    
     parameters params = generateModel(path);
     int solverType = params.getSolverType();
     int numofObj = params.getNumOfObj();
