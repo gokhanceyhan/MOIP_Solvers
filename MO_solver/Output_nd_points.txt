@@ -5,7 +5,7 @@ Success
 #Number of models solved:
 173
 #Elapsed time (seconds):
-7.27966
+8.62983
 #Incumbent ideal point:
 1063 1099 1001 
 #Incumbent nadir point:
