@@ -19,6 +19,7 @@
 #include "subspace.h"
 #include "ilcplex/cplex.h"
 #include "math.h"
+#include "constants.h"
 
 using namespace std;
 
@@ -102,6 +103,7 @@ int tda(int m, string path, double timeLimit, double bound_tolerance, double sca
     tda_cp_status = CPXsetintparam(tda_env, CPXPARAM_MIP_Display, 2);
     tda_cp_status = CPXsetintparam(tda_env, CPX_PARAM_CLOCKTYPE, 2); // wall clock time
     tda_cp_status = CPXsetdblparam(tda_env, CPX_PARAM_TILIM, timeLimit); // sets the given time limit
+    tda_cp_status = CPXsetdblparam (tda_env, CPX_PARAM_EPGAP, MIP_RELGAP);
     
     tda_prob = CPXcreateprob (tda_env, &tda_cp_status, "mathmodel"); // create problem in CPLEX
     tda_cp_status = CPXreadcopyprob (tda_env, tda_prob, (tda_path+"model.lp").c_str(), NULL); // read "model.lp" into CPLEX
@@ -891,7 +893,7 @@ void tda_generatePayoffTable(){
             if(point[k]>tda_idealPoint[k]) tda_idealPoint[k]=point[k];
             if(point[k]<tda_nadirPoint[k]) tda_nadirPoint[k]=point[k];
         }
-        tda_cp_status=CPXchgcoef (tda_env, tda_prob, -1, j, 0.0001);
+        tda_cp_status=CPXchgcoef (tda_env, tda_prob, -1, j, OBJ_EPSILON);
     }
     tda_cp_status=CPXchgcoef (tda_env, tda_prob, -1, tda_num_obj-1, 1.0);
 }

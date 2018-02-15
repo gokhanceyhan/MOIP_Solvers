@@ -19,6 +19,7 @@
 #include "tree.hh"
 #include "subspace.h"
 #include "ilcplex/cplex.h"
+#include "constants.h"
 
 using namespace std;
 
@@ -93,6 +94,7 @@ int exact(int m, string path, double timeLimit, double bound_tolerance)
     cp_status = CPXsetintparam(env, CPXPARAM_MIP_Display, 0);
     cp_status = CPXsetintparam(env, CPX_PARAM_CLOCKTYPE, 2); // wall clock time
     cp_status = CPXsetdblparam(env, CPX_PARAM_TILIM, timeLimit); // sets the given time limit
+    cp_status = CPXsetdblparam (env, CPX_PARAM_EPGAP, MIP_RELGAP); 
     
     prob = CPXcreateprob (env, &cp_status, "mathmodel"); // create problem in CPLEX
     cp_status = CPXreadcopyprob (env, prob, (path+"model.lp").c_str(), NULL); // read "model.lp" into CPLEX

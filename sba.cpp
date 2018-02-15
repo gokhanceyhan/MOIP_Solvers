@@ -20,6 +20,7 @@
 #include "subspace.h"
 #include "ilcplex/cplex.h"
 #include "math.h"
+#include "constants.h"
 
 using namespace std;
 
@@ -97,6 +98,7 @@ int sba(int m, string path, double timeLimit, int pointLimit, double bound_toler
     sba_cp_status = CPXsetintparam(sba_env, CPXPARAM_MIP_Display, 2);
     sba_cp_status = CPXsetintparam(sba_env, CPX_PARAM_CLOCKTYPE, 2); // wall clock time
     sba_cp_status = CPXsetdblparam(sba_env, CPX_PARAM_TILIM, timeLimit); // sets the given time limit
+    sba_cp_status = CPXsetdblparam (sba_env, CPX_PARAM_EPGAP, MIP_RELGAP);
     
     sba_prob = CPXcreateprob (sba_env, &sba_cp_status, "mathmodel"); // create problem in CPLEX
     sba_cp_status = CPXreadcopyprob (sba_env, sba_prob, (sba_path+"model.lp").c_str(), NULL); // read "model.lp" into CPLEX
@@ -890,7 +892,7 @@ void generatePayoffTable(){
             if(point[k]>sba_idealPoint[k]) sba_idealPoint[k]=point[k];
             if(point[k]<sba_nadirPoint[k]) sba_nadirPoint[k]=point[k];
         }
-        sba_cp_status=CPXchgcoef (sba_env, sba_prob, -1, j, 0.0001);
+        sba_cp_status=CPXchgcoef (sba_env, sba_prob, -1, j, OBJ_EPSILON);
     }
     sba_cp_status=CPXchgcoef (sba_env, sba_prob, -1, sba_num_obj-1, 1.0);
 }
