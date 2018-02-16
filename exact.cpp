@@ -129,7 +129,7 @@ int exact(int m, string path, double timeLimit)
     for (int j=0; j<num_obj-1; j++)
         cp_status=CPXchgcoef (env, prob, num_mathmodel_row + j, j, 1);
     
-    cp_status = CPXwriteprob (env, prob, (path+"myprob.lp").c_str(), NULL);
+    // cp_status = CPXwriteprob (env, prob, (path+"myprob.lp").c_str(), NULL);
     
     mathmodel_sol = new double [num_obj];
     cp_status = CPXmipopt (env, prob); // solve the problem
