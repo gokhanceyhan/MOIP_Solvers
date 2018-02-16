@@ -12,7 +12,7 @@
 #include <vector>
 #include <string>
 
-int exact(int , std::string, double, double );
+int exact(int , std::string, double);
 
 
 #endif /* exact_h */

@@ -67,7 +67,6 @@ parameters readInputFile(string path)
     if (pointLimit == ALL_ND_INDICATOR) {
         pointLimit = POINT_LIMIT;
     }
-    InputFile >> boundTolerance;
     InputFile >> territoryLength;
     InputFile >> inputType;
     InputFile >> problemType;
@@ -77,7 +76,7 @@ parameters readInputFile(string path)
     InputFile >> fileName;
     InputFile.close();
     
-    return parameters(solverType, numofObjective, timeLimit, pointLimit, boundTolerance, territoryLength);
+    return parameters(solverType, numofObjective, timeLimit, pointLimit, territoryLength);
 }
 
 void generateKnapsackModel(string path)

@@ -30,7 +30,7 @@ void sba_update_subtree(tree<subspace>::sibling_iterator, int);
 void sba_set_lastBound(tree<subspace>::sibling_iterator);
 void sba_solve_subspace (tree<subspace>::leaf_iterator); // finds the nondominated point with max z_m value in the subspace
 int sba_search_subspace (tree<subspace>::leaf_iterator, vector<float>& p); // search the minimum volume subspaces that contain the given subspace
-vector<double> calculateCriteriaScalingCoeffs();
+vector<double> sba_calculateCriteriaScalingCoeffs();
 void generatePayoffTable();
 vector<float> solveSingleObjectiveProblem(int);
 vector<float> solveForTheInitialSolution();
@@ -70,11 +70,11 @@ ofstream sba_file_ND_points;
 clock_t sba_start;
 double sba_cpu_time;
 
-int sba(int m, string path, double timeLimit, int pointLimit, double bound_tolerance)
+int sba(int m, string path, double timeLimit, int pointLimit)
 {
     sba_start=clock();
     sba_num_obj=m;
-    sba_epsilon = bound_tolerance;
+    sba_epsilon = BOUND_TOLERANCE;
     sba_path = path;
     
     int flag,stop_flag; // zero if there is no new nondominated point
@@ -99,6 +99,8 @@ int sba(int m, string path, double timeLimit, int pointLimit, double bound_toler
     sba_cp_status = CPXsetintparam(sba_env, CPX_PARAM_CLOCKTYPE, 2); // wall clock time
     sba_cp_status = CPXsetdblparam(sba_env, CPX_PARAM_TILIM, timeLimit); // sets the given time limit
     sba_cp_status = CPXsetdblparam (sba_env, CPX_PARAM_EPGAP, MIP_RELGAP);
+    sba_cp_status = CPXsetdblparam (sba_env, CPX_PARAM_EPOPT, SIMPLEX_OPTGAP);
+    sba_cp_status = CPXsetdblparam (sba_env, CPX_PARAM_BAREPCOMP, BARRIER_CONV);
     
     sba_prob = CPXcreateprob (sba_env, &sba_cp_status, "mathmodel"); // create problem in CPLEX
     sba_cp_status = CPXreadcopyprob (sba_env, sba_prob, (sba_path+"model.lp").c_str(), NULL); // read "model.lp" into CPLEX
@@ -106,7 +108,7 @@ int sba(int m, string path, double timeLimit, int pointLimit, double bound_toler
     sba_num_mathmodel_row = CPXgetnumrows (sba_env, sba_prob); // get the number of constraints in the math model
     
     // calculate criteria scaling coefficients
-    vector<double> criteriaScalCoeffs = calculateCriteriaScalingCoeffs();
+    vector<double> criteriaScalCoeffs = sba_calculateCriteriaScalingCoeffs();
     
     // update criterion constraint coefficients for scaling
     int j=0;
@@ -859,7 +861,7 @@ int sba_search_subspace (tree<subspace>::leaf_iterator sub, vector<float>& p)
     
 }
 
-vector<double> calculateCriteriaScalingCoeffs(){
+vector<double> sba_calculateCriteriaScalingCoeffs(){
     
     vector<double> coeffs(sba_num_obj);
     double coeff;

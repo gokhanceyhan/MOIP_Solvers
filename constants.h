@@ -9,10 +9,13 @@
 #ifndef constants_h
 #define constants_h
 
-static const double OBJ_EPSILON = 0.0001;
+static const double OBJ_EPSILON = 1e-4;
+static const double BOUND_TOLERANCE = 1e-4; // should be less than the simplex feasibility tolerance (default = 1e-6)
 static const int ALL_ND_INDICATOR = -1; // it means that there is no point limit specified by the user.
-static const int POINT_LIMIT = 1000000; // maximm number of nd points to be generated.
+static const int POINT_LIMIT = 1e+6; // maximm number of nd points to be generated.
 
 // cplex parameters
 static const double MIP_RELGAP = 1e-10; // mip relative gap
+static const double SIMPLEX_OPTGAP = 1e-9; // simplex optimality gap
+static const double BARRIER_CONV = 1e-9; // barrier complementarity tolerance
 #endif /* constants_h */

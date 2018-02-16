@@ -75,11 +75,11 @@ ofstream tda_file_ND_points;
 clock_t tda_start;
 double tda_cpu_time;
 
-int tda(int m, string path, double timeLimit, double bound_tolerance, double scaledDelta)
+int tda(int m, string path, double timeLimit, double scaledDelta)
 {
     tda_start=clock();
     tda_num_obj=m;
-    tda_epsilon = bound_tolerance;
+    tda_epsilon = BOUND_TOLERANCE;
     tda_path = path;
     
     int flag,stop_flag; // zero if there is no new nondominated point
@@ -104,6 +104,8 @@ int tda(int m, string path, double timeLimit, double bound_tolerance, double sca
     tda_cp_status = CPXsetintparam(tda_env, CPX_PARAM_CLOCKTYPE, 2); // wall clock time
     tda_cp_status = CPXsetdblparam(tda_env, CPX_PARAM_TILIM, timeLimit); // sets the given time limit
     tda_cp_status = CPXsetdblparam (tda_env, CPX_PARAM_EPGAP, MIP_RELGAP);
+    tda_cp_status = CPXsetdblparam (tda_env, CPX_PARAM_EPOPT, SIMPLEX_OPTGAP);
+    tda_cp_status = CPXsetdblparam (tda_env, CPX_PARAM_BAREPCOMP, BARRIER_CONV);
     
     tda_prob = CPXcreateprob (tda_env, &tda_cp_status, "mathmodel"); // create problem in CPLEX
     tda_cp_status = CPXreadcopyprob (tda_env, tda_prob, (tda_path+"model.lp").c_str(), NULL); // read "model.lp" into CPLEX

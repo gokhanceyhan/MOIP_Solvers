@@ -18,16 +18,14 @@ private:
     int solverType; // 1: nMOCO-S, 2: sba, 3: tda
     double timeLimit; // in secs
     int pointLimit;
-    double boundTolerance; // the amount of shift applied in the construction of the bounds.
     double delta; // territory length
     
 public:
-    inline parameters(int solverType, int numOfObj, double timeLimit, int pointLimit, double boundTolerance, double delta){
+    inline parameters(int solverType, int numOfObj, double timeLimit, int pointLimit, double delta){
         this->solverType = solverType;
         this->numOfObj = numOfObj;
         this->timeLimit = timeLimit;
         this->pointLimit = pointLimit;
-        this->boundTolerance = boundTolerance;
         this->delta = delta;
     }
     
@@ -45,10 +43,6 @@ public:
     
     inline int getPointLimit(){
         return this->pointLimit;
-    }
-    
-    inline double getBoundTolerance(){
-        return this->boundTolerance;
     }
     
     inline double getDelta(){

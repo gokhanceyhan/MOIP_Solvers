@@ -12,6 +12,6 @@
 #include <vector>
 #include <string>
 
-int sba(int , std::string, double, int, double );
+int sba(int , std::string, double, int);
 
 #endif /* sba_h */
