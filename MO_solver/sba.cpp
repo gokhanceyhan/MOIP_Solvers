@@ -20,6 +20,7 @@
 #include "subspace.h"
 #include "ilcplex/cplex.h"
 #include "math.h"
+#include "constants.h"
 
 using namespace std;
 
@@ -29,7 +30,7 @@ void sba_update_subtree(tree<subspace>::sibling_iterator, int);
 void sba_set_lastBound(tree<subspace>::sibling_iterator);
 void sba_solve_subspace (tree<subspace>::leaf_iterator); // finds the nondominated point with max z_m value in the subspace
 int sba_search_subspace (tree<subspace>::leaf_iterator, vector<float>& p); // search the minimum volume subspaces that contain the given subspace
-vector<double> calculateCriteriaScalingCoeffs();
+vector<double> sba_calculateCriteriaScalingCoeffs();
 void generatePayoffTable();
 vector<float> solveSingleObjectiveProblem(int);
 vector<float> solveForTheInitialSolution();
@@ -69,11 +70,11 @@ ofstream sba_file_ND_points;
 clock_t sba_start;
 double sba_cpu_time;
 
-int sba(int m, string path, double timeLimit, int pointLimit, double bound_tolerance)
+int sba(int m, string path, double timeLimit, int pointLimit)
 {
     sba_start=clock();
     sba_num_obj=m;
-    sba_epsilon = bound_tolerance;
+    sba_epsilon = BOUND_TOLERANCE;
     sba_path = path;
     
     int flag,stop_flag; // zero if there is no new nondominated point
@@ -97,6 +98,9 @@ int sba(int m, string path, double timeLimit, int pointLimit, double bound_toler
     sba_cp_status = CPXsetintparam(sba_env, CPXPARAM_MIP_Display, 2);
     sba_cp_status = CPXsetintparam(sba_env, CPX_PARAM_CLOCKTYPE, 2); // wall clock time
     sba_cp_status = CPXsetdblparam(sba_env, CPX_PARAM_TILIM, timeLimit); // sets the given time limit
+    sba_cp_status = CPXsetdblparam (sba_env, CPX_PARAM_EPGAP, MIP_RELGAP);
+    sba_cp_status = CPXsetdblparam (sba_env, CPX_PARAM_EPOPT, SIMPLEX_OPTGAP);
+    sba_cp_status = CPXsetdblparam (sba_env, CPX_PARAM_BAREPCOMP, BARRIER_CONV);
     
     sba_prob = CPXcreateprob (sba_env, &sba_cp_status, "mathmodel"); // create problem in CPLEX
     sba_cp_status = CPXreadcopyprob (sba_env, sba_prob, (sba_path+"model.lp").c_str(), NULL); // read "model.lp" into CPLEX
@@ -104,7 +108,7 @@ int sba(int m, string path, double timeLimit, int pointLimit, double bound_toler
     sba_num_mathmodel_row = CPXgetnumrows (sba_env, sba_prob); // get the number of constraints in the math model
     
     // calculate criteria scaling coefficients
-    vector<double> criteriaScalCoeffs = calculateCriteriaScalingCoeffs();
+    vector<double> criteriaScalCoeffs = sba_calculateCriteriaScalingCoeffs();
     
     // update criterion constraint coefficients for scaling
     int j=0;
@@ -116,7 +120,7 @@ int sba(int m, string path, double timeLimit, int pointLimit, double bound_toler
     // generate payoff table
     generatePayoffTable();
     
-    if (sba_solver_status != "ProblemInfeasible")
+    if (sba_solver_status != "FailedToSolveSingleObjProblem")
     {
         // add bound constraints
         sba_mathmodel_sense = new char [sba_num_obj-1];
@@ -167,9 +171,8 @@ int sba(int m, string path, double timeLimit, int pointLimit, double bound_toler
     }
     else
     {
-        cout << "Model is infeasible\n";
+        cout << "Failed to solve single objective problem.\n";
         flag = 0;
-        sba_solver_status = "ProblemInfeasible";
     }
     
     // check the stopping conditions
@@ -249,7 +252,7 @@ int sba(int m, string path, double timeLimit, int pointLimit, double bound_toler
         }
         
         //==================================================================================================================================
-        // pick the new generated point which has the max z_m value
+        // pick the new generated point which has the coverage gap value
         //==================================================================================================================================
         
         sba_new_point=sba_global_lower_bound;
@@ -335,32 +338,39 @@ int sba(int m, string path, double timeLimit, int pointLimit, double bound_toler
     
     // display the generated points
     //cout << "Nondominated point list: \n";
+    sba_file_ND_points << "#Solver type:" << endl << "rMOCO-S_sba" << endl;
     sba_file_ND_points << "#Solver status:" << endl << sba_solver_status << endl;
-    sba_file_ND_points << "#Number of nondominated points:" << endl << sba_num_point << endl;
-    sba_file_ND_points << "#Number of models solved:" << endl << sba_num_model_solved << endl;
-    sba_file_ND_points << "#Elapsed time (seconds):" << endl << sba_cpu_time << endl;
-    sba_file_ND_points << "#Ideal point:" << endl;
-    for (int j=0; j<sba_num_obj-1; j++) sba_file_ND_points << sba_idealPoint[j]*criteriaScalCoeffs[j] << " ";
-    sba_file_ND_points << endl;
-    sba_file_ND_points << "#Incumbent nadir point:" << endl;
-    for (int j=0; j<sba_num_obj-1; j++) sba_file_ND_points << sba_nadirPoint[j]*criteriaScalCoeffs[j] << " ";
-    sba_file_ND_points << endl;
-    
-    // calculate maximum efficient range
-    double scalingCoeff = 0.0;
-    for(int j=0;j<sba_num_obj-1;j++){
-        if(sba_idealPoint[j]-sba_nadirPoint[j]>scalingCoeff)
-            scalingCoeff = sba_idealPoint[j]-sba_nadirPoint[j];
-    }
-    
-    sba_file_ND_points << "#The set of nondominated points:" << endl;
-    for (int i=0; i < sba_gen_points.size(); i++) {
-        for (int j=0; j<sba_num_obj-1; j++) {
-            sba_file_ND_points << sba_gen_points[i][j]*criteriaScalCoeffs[j] << " ";
-        }
-        if (i!=0) sba_file_ND_points << sba_gen_points[i][sba_num_obj-1]/scalingCoeff;
+    if (sba_solver_status != "FailedToSolveSingleObjProblem") {
+        sba_file_ND_points << "#Number of nondominated points:" << endl << sba_num_point << endl;
+        sba_file_ND_points << "#Number of models solved:" << endl << sba_num_model_solved << endl;
+        sba_file_ND_points << "#Elapsed time (seconds):" << endl << sba_cpu_time << endl;
+        sba_file_ND_points << "#Ideal point:" << endl;
+        for (int j=0; j<sba_num_obj-1; j++) sba_file_ND_points << sba_idealPoint[j]*criteriaScalCoeffs[j] << " ";
         sba_file_ND_points << endl;
+        sba_file_ND_points << "#Incumbent nadir point:" << endl;
+        for (int j=0; j<sba_num_obj-1; j++) sba_file_ND_points << sba_nadirPoint[j]*criteriaScalCoeffs[j] << " ";
+        sba_file_ND_points << endl;
+        
+        // calculate maximum efficient range
+        double scalingCoeff = 0.0;
+        for(int j=0;j<sba_num_obj-1;j++){
+            if(sba_idealPoint[j]-sba_nadirPoint[j]>scalingCoeff)
+                scalingCoeff = sba_idealPoint[j]-sba_nadirPoint[j];
+        }
+        
+        sba_file_ND_points << "#The set of nondominated points:" << endl;
+        for (int i=0; i < sba_gen_points.size(); i++) {
+            for (int j=0; j<sba_num_obj-1; j++) {
+                sba_file_ND_points << sba_gen_points[i][j]*criteriaScalCoeffs[j] << " ";
+            }
+            if (i!=0) sba_file_ND_points << sba_gen_points[i][sba_num_obj-1]/scalingCoeff;
+            sba_file_ND_points << endl;
+        }
+    } else {
+        sba_file_ND_points << "#Cplex error code:" << endl << sba_cp_status << endl;
+        sba_file_ND_points << "#Cplex optimization status:" << endl << sba_cp_opt << endl;
     }
+    
     sba_file_ND_points.close();
     CPXfreeprob(sba_env, &sba_prob);
     return 1;
@@ -851,7 +861,7 @@ int sba_search_subspace (tree<subspace>::leaf_iterator sub, vector<float>& p)
     
 }
 
-vector<double> calculateCriteriaScalingCoeffs(){
+vector<double> sba_calculateCriteriaScalingCoeffs(){
     
     vector<double> coeffs(sba_num_obj);
     double coeff;
@@ -879,12 +889,12 @@ void generatePayoffTable(){
     vector<float> point;
     for(int j=0; j<sba_num_obj-1;j++){
         point = solveSingleObjectiveProblem(j);
-        if(sba_solver_status == "ProblemInfeasible") break;
+        if(sba_solver_status == "FailedToSolveSingleObjProblem") break;
         for(int k=0; k<sba_num_obj-1;k++){
             if(point[k]>sba_idealPoint[k]) sba_idealPoint[k]=point[k];
             if(point[k]<sba_nadirPoint[k]) sba_nadirPoint[k]=point[k];
         }
-        sba_cp_status=CPXchgcoef (sba_env, sba_prob, -1, j, 0.0001);
+        sba_cp_status=CPXchgcoef (sba_env, sba_prob, -1, j, OBJ_EPSILON);
     }
     sba_cp_status=CPXchgcoef (sba_env, sba_prob, -1, sba_num_obj-1, 1.0);
 }
@@ -902,8 +912,7 @@ vector<float> solveSingleObjectiveProblem(int objIndex){
         sba_cp_status = CPXgetx (sba_env, sba_prob, sba_mathmodel_sol, 0, sba_num_obj-1); // copies the optimal obj values to the "sba_mathmodel_sol"
         for (int j=0; j<sba_num_obj; j++) point[j]= (float)sba_mathmodel_sol[j];
     } else {
-        sba_solver_status = "ProblemInfeasible";
-        sba_cp_status = CPXwriteprob (sba_env, sba_prob, (sba_path+"infeasible_prob.lp").c_str(), NULL);
+        sba_solver_status = "FailedToSolveSingleObjProblem";
     }
     return point;
 }
@@ -930,7 +939,7 @@ vector<float> solveForTheInitialSolution(){
         sba_cp_status = CPXgetx (sba_env, sba_prob, sba_mathmodel_sol, 0, sba_num_obj-1); // copies the optimal obj values to the "sba_mathmodel_sol"
         for (int j=0; j<sba_num_obj; j++) point[j]= (float)sba_mathmodel_sol[j];
     } else {
-        sba_solver_status = "ProblemInfeasible";
+        sba_solver_status = "FailedToSolveSingleObjProblem";
     }
     
     // reset the model

@@ -49,6 +49,7 @@
 		A87326751C79EF810037EF0F /* libcplex.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libcplex.a; path = "../../../../../../Applications/IBM/ILOG/CPLEX_Studio1261/cplex/lib/x86-64_osx/static_pic/libcplex.a"; sourceTree = "<group>"; };
 		A87326761C79EF810037EF0F /* libcplexdistmip.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libcplexdistmip.a; path = "../../../../../../Applications/IBM/ILOG/CPLEX_Studio1261/cplex/lib/x86-64_osx/static_pic/libcplexdistmip.a"; sourceTree = "<group>"; };
 		A87326771C79EF810037EF0F /* libilocplex.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libilocplex.a; path = "../../../../../../Applications/IBM/ILOG/CPLEX_Studio1261/cplex/lib/x86-64_osx/static_pic/libilocplex.a"; sourceTree = "<group>"; };
+		A877BE5F2035D8D1000A42D4 /* constants.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = constants.h; sourceTree = "<group>"; };
 		A8937591200A2999003E38F0 /* tda.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = tda.h; sourceTree = "<group>"; };
 		A8937592200A29B9003E38F0 /* tda.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = tda.cpp; sourceTree = "<group>"; };
 		A8B573A51F962F1A0081F2F9 /* parameters.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = parameters.h; sourceTree = "<group>"; };
@@ -108,6 +109,7 @@
 				A86B86A11F7E634400416783 /* sba.h */,
 				A8937591200A2999003E38F0 /* tda.h */,
 				A8937592200A29B9003E38F0 /* tda.cpp */,
+				A877BE5F2035D8D1000A42D4 /* constants.h */,
 			);
 			path = MO_solver;
 			sourceTree = "<group>";

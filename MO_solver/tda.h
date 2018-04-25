@@ -12,6 +12,6 @@
 #include <vector>
 #include <string>
 
-int tda(int , std::string, double, double, double );
+int tda(int , std::string, double, double );
 
 #endif /* tda_h */

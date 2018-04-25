@@ -1,6 +1,7 @@
 
 #include "generateModel.h"
 #include "parameters.h"
+#include "constants.h"
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -13,7 +14,7 @@ void generateKnapsackModel(string );
 void generateAssignmentModel(string );
 
 /*================================
-	Global input file variables
+ Global input file variables
  ================================*/
 int solverType;
 int pointLimit;
@@ -30,7 +31,7 @@ char runType;
 string fileName;
 int numofInstance;
 
-float EPSILON = 0.0001;
+float EPSILON = OBJ_EPSILON;
 
 
 parameters generateModel(string path)
@@ -49,7 +50,7 @@ parameters generateModel(string path)
     {
         generateAssignmentModel(path);
     }
-
+    
     return(params);
 }
 
@@ -63,7 +64,9 @@ parameters readInputFile(string path)
     InputFile >> numofObjective;
     InputFile >> timeLimit;
     InputFile >> pointLimit;
-    InputFile >> boundTolerance;
+    if (pointLimit == ALL_ND_INDICATOR) {
+        pointLimit = POINT_LIMIT;
+    }
     InputFile >> territoryLength;
     InputFile >> inputType;
     InputFile >> problemType;
@@ -73,7 +76,7 @@ parameters readInputFile(string path)
     InputFile >> fileName;
     InputFile.close();
     
-    return parameters(solverType, numofObjective, timeLimit, pointLimit, boundTolerance, territoryLength);
+    return parameters(solverType, numofObjective, timeLimit, pointLimit, territoryLength);
 }
 
 void generateKnapsackModel(string path)

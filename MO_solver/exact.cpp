@@ -19,6 +19,8 @@
 #include "tree.hh"
 #include "subspace.h"
 #include "ilcplex/cplex.h"
+#include "constants.h"
+#include "math.h"
 
 using namespace std;
 
@@ -28,6 +30,7 @@ void update_subtree(tree<subspace>::sibling_iterator, int);
 void set_lastBound(tree<subspace>::sibling_iterator);
 void solve_subspace (tree<subspace>::leaf_iterator); // finds the nondominated point with max z_m value in the subspace
 int search_subspace (tree<subspace>::leaf_iterator, vector<float>& p); // search the minimum volume subspaces that contain the given subspace
+vector<double> calculateCriteriaScalingCoeffs(); // scales the criteron vectors by dividing them to their Euclidean norms
 
 //======= general global variables==========================================
 int num_obj; // number of objectives
@@ -64,11 +67,11 @@ ofstream file_ND_points;
 clock_t start;
 double cpu_time;
 
-int exact(int m, string path, double timeLimit, double bound_tolerance)
+int exact(int m, string path, double timeLimit)
 {
     start=clock();
     num_obj=m;
-    epsilon = bound_tolerance;
+    epsilon = BOUND_TOLERANCE;
     
     int flag,stop_flag; // zero if there is no new nondominated point
     int flag_insert; // used to indicate whether the new point is inserted at the first level
@@ -93,11 +96,24 @@ int exact(int m, string path, double timeLimit, double bound_tolerance)
     cp_status = CPXsetintparam(env, CPXPARAM_MIP_Display, 0);
     cp_status = CPXsetintparam(env, CPX_PARAM_CLOCKTYPE, 2); // wall clock time
     cp_status = CPXsetdblparam(env, CPX_PARAM_TILIM, timeLimit); // sets the given time limit
+    cp_status = CPXsetdblparam (env, CPX_PARAM_EPGAP, MIP_RELGAP);
+    cp_status = CPXsetdblparam (env, CPX_PARAM_EPOPT, SIMPLEX_OPTGAP);
+    cp_status = CPXsetdblparam (env, CPX_PARAM_BAREPCOMP, BARRIER_CONV);
     
     prob = CPXcreateprob (env, &cp_status, "mathmodel"); // create problem in CPLEX
     cp_status = CPXreadcopyprob (env, prob, (path+"model.lp").c_str(), NULL); // read "model.lp" into CPLEX
     num_mathmodel_col = CPXgetnumcols (env, prob); // get the number of variables in the math model
     num_mathmodel_row = CPXgetnumrows (env, prob); // get the number of constraints in the math model
+    
+    // calculate criteria scaling coefficients
+    vector<double> criteriaScalCoeffs = calculateCriteriaScalingCoeffs();
+    
+    // update criterion constraint coefficients for scaling
+    int j=0;
+    for(int r=num_mathmodel_row-num_obj;r<num_mathmodel_row;r++){
+        cp_status=CPXchgcoef (env, prob, r, j, -criteriaScalCoeffs[j]);
+        j++;
+    }
     
     // initialize ideal and nadir point vectors
     for(int j=0; j<num_obj;j++){
@@ -113,7 +129,7 @@ int exact(int m, string path, double timeLimit, double bound_tolerance)
     for (int j=0; j<num_obj-1; j++)
         cp_status=CPXchgcoef (env, prob, num_mathmodel_row + j, j, 1);
     
-    //cp_status = CPXwriteprob (env, prob, "myprob.lp", NULL);
+    // cp_status = CPXwriteprob (env, prob, (path+"myprob.lp").c_str(), NULL);
     
     mathmodel_sol = new double [num_obj];
     cp_status = CPXmipopt (env, prob); // solve the problem
@@ -172,9 +188,9 @@ int exact(int m, string path, double timeLimit, double bound_tolerance)
     }
     else
     {
-        cout << "Model is infeasible\n";
+        cout << "Failed to solve single objective problem.\n";
         flag = 0;
-        solver_status = "ProblemInfeasible";
+        solver_status = "FailedToSolveSingleObjProblem";
     }
     
     // check the stopping conditions
@@ -325,23 +341,30 @@ int exact(int m, string path, double timeLimit, double bound_tolerance)
     
     // display the generated points
     //cout << "Nondominated point list: \n";
+    file_ND_points << "#Solver type:" << endl << "nMOCO-S" << endl;
     file_ND_points << "#Solver status:" << endl << solver_status << endl;
-    file_ND_points << "#Number of nondominated points:" << endl << num_point << endl;
-    file_ND_points << "#Number of models solved:" << endl << num_model_solved << endl;
-    file_ND_points << "#Elapsed time (seconds):" << endl << cpu_time << endl;
-    file_ND_points << "#Incumbent ideal point:" << endl;
-    for (int j=0; j<num_obj; j++) file_ND_points << idealPoint[j] << " ";
-    file_ND_points << endl;
-    file_ND_points << "#Incumbent nadir point:" << endl;
-    for (int j=0; j<num_obj; j++) file_ND_points << nadirPoint[j] << " ";
-    file_ND_points << endl;
-    file_ND_points << "#The set of nondominated points:" << endl;
-    for (int i=0; i < gen_points.size(); i++) {
-        for (int j=0; j<num_obj; j++) {
-            file_ND_points << gen_points[i][j] << " ";
+    if (solver_status != "FailedToSolveSingleObjProblem") {
+        file_ND_points << "#Number of nondominated points:" << endl << num_point << endl;
+        file_ND_points << "#Number of models solved:" << endl << num_model_solved << endl;
+        file_ND_points << "#Elapsed time (seconds):" << endl << cpu_time << endl;
+        file_ND_points << "#Incumbent ideal point:" << endl;
+        for (int j=0; j<num_obj; j++) file_ND_points << idealPoint[j]*criteriaScalCoeffs[j] << " ";
+        file_ND_points << endl;
+        file_ND_points << "#Incumbent nadir point:" << endl;
+        for (int j=0; j<num_obj; j++) file_ND_points << nadirPoint[j]*criteriaScalCoeffs[j] << " ";
+        file_ND_points << endl;
+        file_ND_points << "#The set of nondominated points:" << endl;
+        for (int i=0; i < gen_points.size(); i++) {
+            for (int j=0; j<num_obj; j++) {
+                file_ND_points << gen_points[i][j]*criteriaScalCoeffs[j] << " ";
+            }
+            file_ND_points << "\n";
         }
-        file_ND_points << "\n";
+    } else {
+        file_ND_points << "#Cplex error code:" << endl << cp_status << endl;
+        file_ND_points << "#Cplex optimization status:" << endl << cp_opt << endl;
     }
+    
     file_ND_points.close();
     CPXfreeprob(env, &prob);
     return 1;
@@ -829,4 +852,23 @@ int search_subspace (tree<subspace>::leaf_iterator sub, vector<float>& p)
     }
     return (status);
     
+}
+
+vector<double> calculateCriteriaScalingCoeffs(){
+    
+    vector<double> coeffs(num_obj);
+    double coeff;
+    
+    int j = 0;
+    for(int r=num_mathmodel_row-num_obj;r<num_mathmodel_row;r++){
+        coeffs[j]=0.0;
+        for(int c=num_obj;c<num_mathmodel_col;c++){
+            CPXgetcoef (env, prob, r, c, &coeff);
+            coeffs[j]+=pow(coeff,2);
+        }
+        coeffs[j]=pow(coeffs[j],0.5);
+        j++;
+    }
+    
+    return coeffs;
 }

@@ -19,6 +19,7 @@
 #include "subspace.h"
 #include "ilcplex/cplex.h"
 #include "math.h"
+#include "constants.h"
 
 using namespace std;
 
@@ -74,11 +75,11 @@ ofstream tda_file_ND_points;
 clock_t tda_start;
 double tda_cpu_time;
 
-int tda(int m, string path, double timeLimit, double bound_tolerance, double scaledDelta)
+int tda(int m, string path, double timeLimit, double scaledDelta)
 {
     tda_start=clock();
     tda_num_obj=m;
-    tda_epsilon = bound_tolerance;
+    tda_epsilon = BOUND_TOLERANCE;
     tda_path = path;
     
     int flag,stop_flag; // zero if there is no new nondominated point
@@ -102,6 +103,9 @@ int tda(int m, string path, double timeLimit, double bound_tolerance, double sca
     tda_cp_status = CPXsetintparam(tda_env, CPXPARAM_MIP_Display, 2);
     tda_cp_status = CPXsetintparam(tda_env, CPX_PARAM_CLOCKTYPE, 2); // wall clock time
     tda_cp_status = CPXsetdblparam(tda_env, CPX_PARAM_TILIM, timeLimit); // sets the given time limit
+    tda_cp_status = CPXsetdblparam (tda_env, CPX_PARAM_EPGAP, MIP_RELGAP);
+    tda_cp_status = CPXsetdblparam (tda_env, CPX_PARAM_EPOPT, SIMPLEX_OPTGAP);
+    tda_cp_status = CPXsetdblparam (tda_env, CPX_PARAM_BAREPCOMP, BARRIER_CONV);
     
     tda_prob = CPXcreateprob (tda_env, &tda_cp_status, "mathmodel"); // create problem in CPLEX
     tda_cp_status = CPXreadcopyprob (tda_env, tda_prob, (tda_path+"model.lp").c_str(), NULL); // read "model.lp" into CPLEX
@@ -124,7 +128,7 @@ int tda(int m, string path, double timeLimit, double bound_tolerance, double sca
     // set the delta value in the original space
     delta = tda_convertBoundTolerance(scaledDelta);
     
-    if (tda_solver_status != "ProblemInfeasible")
+    if (tda_solver_status != "FailedToSolveSingleObjProblem")
     {
         // add bound constraints
         tda_mathmodel_sense = new char [tda_num_obj-1];
@@ -175,9 +179,8 @@ int tda(int m, string path, double timeLimit, double bound_tolerance, double sca
     }
     else
     {
-        cout << "Model is infeasible\n";
+        cout << "Failed to solve single objective problem.\n";
         flag = 0;
-        tda_solver_status = "ProblemInfeasible";
     }
     
     // check the stopping conditions
@@ -325,32 +328,38 @@ int tda(int m, string path, double timeLimit, double bound_tolerance, double sca
     
     // display the generated points
     //cout << "Nondominated point list: \n";
+    tda_file_ND_points << "#Solver type:" << endl << "rMOCO-S_tda" << endl;
     tda_file_ND_points << "#Solver status:" << endl << tda_solver_status << endl;
-    tda_file_ND_points << "#Number of nondominated points:" << endl << tda_num_point << endl;
-    tda_file_ND_points << "#Number of models solved:" << endl << tda_num_model_solved << endl;
-    tda_file_ND_points << "#Elapsed time (seconds):" << endl << tda_cpu_time << endl;
-    tda_file_ND_points << "#Ideal point:" << endl;
-    for (int j=0; j<tda_num_obj-1; j++) tda_file_ND_points << tda_idealPoint[j]*criteriaScalCoeffs[j] << " ";
-    tda_file_ND_points << endl;
-    tda_file_ND_points << "#Incumbent nadir point:" << endl;
-    for (int j=0; j<tda_num_obj-1; j++) tda_file_ND_points << tda_nadirPoint[j]*criteriaScalCoeffs[j] << " ";
-    tda_file_ND_points << endl;
-    
-    // calculate maximum efficient range
-    double scalingCoeff = 0.0;
-    for(int j=0;j<tda_num_obj-1;j++){
-        if(tda_idealPoint[j]-tda_nadirPoint[j]>scalingCoeff)
-            scalingCoeff = tda_idealPoint[j]-tda_nadirPoint[j];
-    }
-    
-    tda_file_ND_points << "#The set of nondominated points:" << endl;
-    for (int i=0; i < tda_gen_points.size(); i++) {
-        for (int j=0; j<tda_num_obj-1; j++) {
-            tda_file_ND_points << tda_gen_points[i][j]*criteriaScalCoeffs[j]-delta << " ";
-        }
-        if (i!=0) tda_file_ND_points << tda_gen_points[i][tda_num_obj-1]/scalingCoeff;
+    if (tda_solver_status != "FailedToSolveSingleObjProblem") {
+        tda_file_ND_points << "#Number of nondominated points:" << endl << tda_num_point << endl;
+        tda_file_ND_points << "#Number of models solved:" << endl << tda_num_model_solved << endl;
+        tda_file_ND_points << "#Elapsed time (seconds):" << endl << tda_cpu_time << endl;
+        tda_file_ND_points << "#Ideal point:" << endl;
+        for (int j=0; j<tda_num_obj-1; j++) tda_file_ND_points << tda_idealPoint[j]*criteriaScalCoeffs[j] << " ";
         tda_file_ND_points << endl;
+        tda_file_ND_points << "#Incumbent nadir point:" << endl;
+        for (int j=0; j<tda_num_obj-1; j++) tda_file_ND_points << tda_nadirPoint[j]*criteriaScalCoeffs[j] << " ";
+        tda_file_ND_points << endl;
+        
+        // calculate maximum efficient range
+        double scalingCoeff = 0.0;
+        for(int j=0;j<tda_num_obj-1;j++){
+            if(tda_idealPoint[j]-tda_nadirPoint[j]>scalingCoeff)
+                scalingCoeff = tda_idealPoint[j]-tda_nadirPoint[j];
+        }
+        
+        tda_file_ND_points << "#The set of nondominated points:" << endl;
+        for (int i=0; i < tda_gen_points.size(); i++) {
+            for (int j=0; j<tda_num_obj-1; j++) {
+                tda_file_ND_points << tda_gen_points[i][j]*criteriaScalCoeffs[j]-delta << " ";
+            }
+            tda_file_ND_points << endl;
+        }
+    } else {
+        tda_file_ND_points << "#Cplex error code:" << endl << tda_cp_status << endl;
+        tda_file_ND_points << "#Cplex optimization status:" << endl << tda_cp_opt << endl;
     }
+    
     tda_file_ND_points.close();
     CPXfreeprob(tda_env, &tda_prob);
     return 1;
@@ -881,12 +890,12 @@ void tda_generatePayoffTable(){
     vector<float> point;
     for(int j=0; j<tda_num_obj-1;j++){
         point = tda_solveSingleObjectiveProblem(j);
-        if(tda_solver_status == "ProblemInfeasible") break;
+        if(tda_solver_status == "FailedToSolveSingleObjProblem") break;
         for(int k=0; k<tda_num_obj-1;k++){
             if(point[k]>tda_idealPoint[k]) tda_idealPoint[k]=point[k];
             if(point[k]<tda_nadirPoint[k]) tda_nadirPoint[k]=point[k];
         }
-        tda_cp_status=CPXchgcoef (tda_env, tda_prob, -1, j, 0.0001);
+        tda_cp_status=CPXchgcoef (tda_env, tda_prob, -1, j, OBJ_EPSILON);
     }
     tda_cp_status=CPXchgcoef (tda_env, tda_prob, -1, tda_num_obj-1, 1.0);
 }
@@ -904,8 +913,7 @@ vector<float> tda_solveSingleObjectiveProblem(int objIndex){
         tda_cp_status = CPXgetx (tda_env, tda_prob, tda_mathmodel_sol, 0, tda_num_obj-1); // copies the optimal obj values to the "tda_mathmodel_sol"
         for (int j=0; j<tda_num_obj; j++) point[j]= (float)tda_mathmodel_sol[j];
     } else {
-        tda_solver_status = "ProblemInfeasible";
-        tda_cp_status = CPXwriteprob (tda_env, tda_prob, (tda_path+"infeasible_prob.lp").c_str(), NULL);
+        tda_solver_status = "FailedToSolveSingleObjProblem";
     }
     return point;
 }
@@ -931,7 +939,7 @@ vector<float> tda_solveForTheInitialSolution(){
         tda_cp_status = CPXgetx (tda_env, tda_prob, tda_mathmodel_sol, 0, tda_num_obj-1); // copies the optimal obj values to the "tda_mathmodel_sol"
         for (int j=0; j<tda_num_obj; j++) point[j]= (float)tda_mathmodel_sol[j];
     } else {
-        tda_solver_status = "ProblemInfeasible";
+        tda_solver_status = "FailedToSolveSingleObjProblem";
     }
     
     // reset the model

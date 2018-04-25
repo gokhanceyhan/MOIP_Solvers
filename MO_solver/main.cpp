@@ -24,24 +24,23 @@ int main(int argc, const char * argv[]) {
     int numofObj = params.getNumOfObj();
     double timeLimit = params.getTimeLimit();
     int pointLimit = params.getPointLimit();
-    double bound_tolerance = params.getBoundTolerance();
     double delta = params.getDelta();
     
     switch(solverType){
         case 1:
             // generate all nondominated points
             cout << "EXACT" << endl;
-            exact(numofObj, path, timeLimit, bound_tolerance);
+            exact(numofObj, path, timeLimit);
             break;
         case 2:
             // generate worst covered representative points
             cout << "SBA" << endl;
-            sba(numofObj+1, path, timeLimit, pointLimit, bound_tolerance);
+            sba(numofObj+1, path, timeLimit, pointLimit);
             break;
         case 3:
             // generate representative points achieving the desired coverage gap
             cout << "TDA" << endl;
-            tda(numofObj+1, path, timeLimit, bound_tolerance, delta);
+            tda(numofObj+1, path, timeLimit, delta);
             break;
     }
     
