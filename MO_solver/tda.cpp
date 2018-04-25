@@ -863,10 +863,6 @@ vector<double> tda_calculateCriteriaScalingCoeffs(){
     }
     coeffs[tda_num_obj-1]=1.0;
     
-    for (int j=0; j<tda_num_obj; j++) {
-        coeffs[j]=1.0;
-    }
-    
     return coeffs;
 }
 
