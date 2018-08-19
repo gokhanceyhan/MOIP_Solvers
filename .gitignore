@@ -1,0 +1,5 @@
+# model file
+*.lp
+
+# data files
+*.txt
