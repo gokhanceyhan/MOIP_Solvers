@@ -2,4 +2,5 @@
 *.lp
 
 # data files
-*.txtMO_solver.xcodeproj
+*.txt
+MO_solver.xcodeproj
