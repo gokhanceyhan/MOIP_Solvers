@@ -345,5 +345,6 @@ void updateModelFileObjective(string path){
     InputFile.close();
     OutputFile.close();
     // change the output file name
+    rename((path+fileName).c_str(), (path+"model_given.lp").c_str());
     rename((path+"model2.lp").c_str(), (path+fileName).c_str());
 }
