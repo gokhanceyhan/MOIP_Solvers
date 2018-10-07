@@ -3,4 +3,6 @@
 
 # data files
 *.txt
+
 MO_solver.xcodeproj
+.DS_Store
