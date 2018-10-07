@@ -351,7 +351,7 @@ int tda(int m, string path, double timeLimit, double scaledDelta)
         tda_file_ND_points << "#The set of nondominated points:" << endl;
         for (int i=0; i < tda_gen_points.size(); i++) {
             for (int j=0; j<tda_num_obj-1; j++) {
-                tda_file_ND_points << tda_gen_points[i][j]*criteriaScalCoeffs[j]-delta << " ";
+                tda_file_ND_points << (tda_gen_points[i][j]-delta)*criteriaScalCoeffs[j] << " ";
             }
             tda_file_ND_points << endl;
         }
@@ -863,10 +863,6 @@ vector<double> tda_calculateCriteriaScalingCoeffs(){
     }
     coeffs[tda_num_obj-1]=1.0;
     
-    for (int j=0; j<tda_num_obj; j++) {
-        coeffs[j]=1.0;
-    }
-    
     return coeffs;
 }
 
@@ -919,7 +915,7 @@ vector<float> tda_solveSingleObjectiveProblem(int objIndex){
 }
 
 vector<float> tda_solveForTheInitialSolution(){
-    // call this function after tda_generatePayoffTable() method and constructing the coverega constraints
+    // call this function after tda_generatePayoffTable() method and constructing the coverage constraints
     vector<float> point(tda_num_obj-1);
     
     // modify the model to obtain achievement scalarizing program
@@ -937,7 +933,7 @@ vector<float> tda_solveForTheInitialSolution(){
     if (tda_cp_opt==101 || tda_cp_opt==102)
     {
         tda_cp_status = CPXgetx (tda_env, tda_prob, tda_mathmodel_sol, 0, tda_num_obj-1); // copies the optimal obj values to the "tda_mathmodel_sol"
-        for (int j=0; j<tda_num_obj; j++) point[j]= (float)tda_mathmodel_sol[j];
+        for (int j=0; j<tda_num_obj; j++) point[j]= (float)tda_mathmodel_sol[j] + delta;
     } else {
         tda_solver_status = "FailedToSolveSingleObjProblem";
     }

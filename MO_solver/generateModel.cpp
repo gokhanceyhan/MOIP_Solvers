@@ -12,6 +12,7 @@ using namespace std;
 parameters readInputFile(string );
 void generateKnapsackModel(string );
 void generateAssignmentModel(string );
+void updateModelFileObjective(string );
 
 /*================================
  Global input file variables
@@ -40,7 +41,7 @@ parameters generateModel(string path)
     
     if (inputType=='M')
     {
-        
+        updateModelFileObjective(path);
     }
     else if (problemType=="KP")
     {
@@ -302,4 +303,48 @@ void generateAssignmentModel(string path)
     
     OutputFile.close();
     InputFile.close();
+}
+
+void updateModelFileObjective(string path){
+    ifstream InputFile;
+    ofstream OutputFile;
+    InputFile.open((path+fileName).c_str());
+    OutputFile.open((path+"model2.lp").c_str());
+    // create the objective function
+    OutputFile << "MAX" << endl;
+    if(solverType==2 || solverType==3){ // SBA or TDA solver
+        for(int j=0;j<numofObjective;j++)
+        {
+            OutputFile << EPSILON << "z" << j+1 << " + ";
+        }
+        OutputFile << "z" << numofObjective+1 << endl;
+    } else{
+        for(int j=0;j<numofObjective-1;j++)
+        {
+            OutputFile << EPSILON << "z" << j+1 << " + ";
+        }
+        OutputFile << "z" << numofObjective << endl;
+    }
+    // copy the rest of the model file from the input file to the output file
+    string line;
+    while(!InputFile.eof()) // To get you all the lines.
+    {
+        getline(InputFile,line); // Saves the line
+        if (line.compare("Subject To") == 0 ||
+            line.compare("SUBJECT TO") == 0 ||
+            line.compare("subject to") == 0){
+            OutputFile << line << endl;
+            break;
+        }
+    }
+    while(!InputFile.eof()) // To get you all the lines.
+    {
+        getline(InputFile,line); // Saves the line
+        OutputFile << line << endl;
+    }
+    InputFile.close();
+    OutputFile.close();
+    // change the output file name
+    rename((path+fileName).c_str(), (path+"model_given.lp").c_str());
+    rename((path+"model2.lp").c_str(), (path+fileName).c_str());
 }

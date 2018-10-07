@@ -1,5 +1,6 @@
-# Model file
+# model file
 *.lp
 
-# Data files
+# data files
 *.txt
+MO_solver.xcodeproj
