@@ -402,7 +402,11 @@ void sba_solve_subspace (tree<subspace>::leaf_iterator sub)
         //==========================================================================
         
         for (int j=0; j<sba_num_obj-1; j++)
+        {
+            if (bound[j] == sba_float_minus_infinity)
+                bound[j] = -CPX_INFBOUND;
             sba_cp_status=CPXchgcoef (sba_env, sba_prob, sba_num_mathmodel_row + j, -1, bound[j]);
+        }
         
         // sba_cp_status = CPXwriteprob (sba_env, sba_prob, (sba_path+"myprob.lp").c_str(), NULL);
         

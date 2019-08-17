@@ -391,7 +391,11 @@ void tda_solve_subspace (tree<subspace>::leaf_iterator sub)
         //==========================================================================
         
         for (int j=0; j<tda_num_obj-1; j++)
+        {
+            if (bound[j] == tda_float_minus_infinity)
+                bound[j] = -CPX_INFBOUND;
             tda_cp_status=CPXchgcoef (tda_env, tda_prob, tda_num_mathmodel_row + j, -1, bound[j]);
+        }
         
         // tda_cp_status = CPXwriteprob (tda_env, tda_prob, (tda_path+"myprob.lp").c_str(), NULL);
         
