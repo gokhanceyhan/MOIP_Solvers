@@ -48,7 +48,7 @@ vector<float> new_point; // last nondominated point generated
 float float_minus_infinity=-numeric_limits<float>::infinity( ); // set to minus infinity for type "float".
 vector<float> global_lower_bound; // global lower bound vector at the beginning of the algorithm
 double epsilon; // the amount by which the bounds are shifted.
-
+string path_to_solver; //  path to the current folder
 
 
 // ==== cplex and math model variables ======================================
@@ -72,6 +72,7 @@ int exact(int m, string path, double timeLimit)
     start=clock();
     num_obj=m;
     epsilon = BOUND_TOLERANCE;
+    path_to_solver = path;
     
     int flag,stop_flag; // zero if there is no new nondominated point
     int flag_insert; // used to indicate whether the new point is inserted at the first level
@@ -396,9 +397,13 @@ void solve_subspace (tree<subspace>::leaf_iterator sub)
         //==========================================================================
         
         for (int j=0; j<num_obj-1; j++)
+        {
+            if (bound[j] == float_minus_infinity)
+                bound[j] = -CPX_INFBOUND;
             cp_status=CPXchgcoef (env, prob, num_mathmodel_row + j, -1, bound[j]);
+        }
         
-        //cp_status = CPXwriteprob (env, prob, "myprob.lp", NULL);
+        // cp_status = CPXwriteprob (env, prob, (path_to_solver + "myprob.lp").c_str(), NULL);
         
         cp_status = CPXmipopt (env, prob); // solve the problem
         cp_opt=CPXgetstat(env,prob);
